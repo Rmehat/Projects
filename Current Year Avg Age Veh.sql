@@ -1,0 +1,139 @@
+--BEST VERSION
+WITH POLKDATASET AS
+(
+    SELECT
+        RPT_YR,
+        RPT_MONTH,
+        COUNTRY_NAME,
+        VEH_TYPE,
+        YR_MDL,
+        VIN_GVW,
+        COUNT(vin) AS VIN_COUNT,
+        (RPT_YR - YR_MDL) + 1 AS VEHICLE_AGE
+    FROM
+        OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL
+    WHERE
+        VIN_GVW IN ('6', '7', '8')
+        AND RPT_YR = (SELECT MAX(RPT_YR) FROM OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL)
+        AND RPT_MONTH = (SELECT MAX(RPT_MONTH) FROM OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL WHERE RPT_YR = (SELECT MAX(RPT_YR) FROM OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL))
+        AND VEHICLE_AGE <= 15
+    GROUP BY
+        RPT_YR,
+        RPT_MONTH,
+        COUNTRY_NAME,
+        VEH_TYPE,
+        YR_MDL,
+        VIN_GVW
+)
+
+SELECT
+    RPT_YR,
+    ROUND(SUM(VIN_COUNT * VEHICLE_AGE) / SUM(VIN_COUNT), 2) AS AVG_AGE_CLS_6TO8,
+    ROUND(SUM(CASE WHEN VIN_GVW = '8' THEN VIN_COUNT * VEHICLE_AGE ELSE 0 END) / SUM(CASE WHEN VIN_GVW = '8' THEN VIN_COUNT ELSE 0 END), 2) AS AVG_AGE_CLS_8
+FROM 
+    POLKDATASET
+GROUP BY
+    RPT_YR
+    ;
+    
+
+--dynamic
+with AVG as
+(
+    SELECT
+        RPT_YR, 
+        RPT_MONTH,
+        DATEFROMPARTS(RPT_YR,RPT_MONTH,01) AS REPORT_DATE,
+        COUNTRY_NAME, 
+        VEH_TYPE,
+        MAKE,
+        YR_MDL,
+        VIN,
+        VIN_GVW,
+        Count(Vin) AS VIN_COUNT,
+        (RPT_YR - YR_MDL)+1 AS VEHICLE_AGE,
+        CASE
+            WHEN VIN_GVW in ('8') THEN VIN_COUNT*VEHICLE_AGE
+            ELSE 0
+        END AS CLASS8SP,
+        CASE
+            WHEN VIN_GVW in ('8') THEN VIN_COUNT
+            ELSE 0
+        END AS CLASS8CNT
+    FROM 
+        OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL
+    WHERE
+        VIN_GVW IN ('6','7','8')
+        AND RPT_YR = YEAR(CURRENT_DATE)-1
+        AND RPT_MONTH IN ('12')
+        AND VEHICLE_AGE <= 15
+    GROUP BY 
+        RPT_YR, 
+        RPT_MONTH,
+        COUNTRY_NAME, 
+        VEH_TYPE,
+        MAKE,
+        YR_MDL,
+        VIN,
+        VIN_GVW
+)
+
+select
+    rpt_yr,
+    ROUND(sum(VIN_COUNT*VEHICLE_AGE)/SUM(VIN_COUNT),2) AS AVG_AGE_CLS_6TO8,
+    ROUND(sum(CLASS8SP)/SUM(CLASS8CNT),2) AS AVG_AGE_CLS_8
+from
+    AVG
+group by
+    rpt_Yr;
+
+
+--dynamic (better)
+with AVG as
+(
+    SELECT
+        RPT_YR, 
+        RPT_MONTH,
+        DATEFROMPARTS(RPT_YR,RPT_MONTH,01) AS REPORT_DATE,
+        COUNTRY_NAME, 
+        VEH_TYPE,
+        MAKE,
+        YR_MDL,
+        VIN,
+        VIN_GVW,
+        Count(Vin) AS VIN_COUNT,
+        (RPT_YR - YR_MDL)+1 AS VEHICLE_AGE,
+        CASE
+            WHEN VIN_GVW in ('8') THEN VIN_COUNT*VEHICLE_AGE
+            ELSE 0
+        END AS CLASS8SP,
+        CASE
+            WHEN VIN_GVW in ('8') THEN VIN_COUNT
+            ELSE 0
+        END AS CLASS8CNT
+    FROM 
+        OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL
+    WHERE
+        VIN_GVW IN ('6','7','8')
+        AND RPT_YR = (SELECT MAX(RPT_YR) FROM OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL)
+        AND RPT_MONTH = (SELECT MAX(RPT_MONTH) FROM OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL WHERE RPT_YR = (SELECT MAX(RPT_YR) FROM OMEGA_PROD_DB.ITD_POLK.POLK_VIO_ALL))
+        AND VEHICLE_AGE <= 15
+    GROUP BY 
+        RPT_YR, 
+        RPT_MONTH,
+        COUNTRY_NAME, 
+        VEH_TYPE,
+        MAKE,
+        YR_MDL,
+        VIN,
+        VIN_GVW
+)
+
+select
+    rpt_yr,
+    ROUND(sum(VIN_COUNT*VEHICLE_AGE)/SUM(VIN_COUNT),2) AS AVG_AGE_CLS_6TO8,
+    ROUND(sum(CLASS8SP)/SUM(CLASS8CNT),2) AS AVG_AGE_CLS_8
+from
+    AVG
+group by
+    rpt_Yr;
