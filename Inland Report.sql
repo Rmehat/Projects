@@ -1,0 +1,109 @@
+--Recreated Report second part
+WITH INLAND_GENERAL AS
+(
+--INLAND GENERAL
+SELECT
+    GRP_NUM,
+    ZCD,
+    ZCD_NM,
+    Sum(IFF(YEAR(SLS_INV_DT)=YEAR(CURRENT_DATE)-1 AND SLS_INV_DT <= DATEADD('year',-1,CURRENT_DATE-1),EXT_NET,0)) AS PYSales,
+    Sum(IFF(YEAR(SLS_INV_DT)=YEAR(CURRENT_DATE),EXT_NET,0)) AS CYSales,
+    DIV0((CYSales-PYSales),PYSales) AS PURCHASE_GROWTH
+FROM
+    PPD_DB.MATERIALIZED.VC_MARKETING_SALES_HISTORY
+WHERE
+    GRP_NUM IN ('I003',
+                'I133')
+    AND SLS_INV_DT < CURRENT_DATE
+GROUP BY 
+    ZCD, 
+    GRP_NUM, 
+    ZCD_NM
+ORDER BY
+    ZCD
+),
+
+TRP AS
+(
+--TRP
+SELECT 
+    GRP_NUM,
+    ZCD,
+    ZCD_NM, 
+    Sum(IFF(YEAR(SLS_INV_DT)=YEAR(CURRENT_DATE)-1 AND SLS_INV_DT <= DATEADD('year',-1,CURRENT_DATE-1),EXT_NET,0)) AS PYTRPSales,
+    Sum(IFF(YEAR(SLS_INV_DT)=YEAR(CURRENT_DATE),EXT_NET,0)) AS CYTRPSales,
+    DIV0((CYTRPSales-PYTRPSales),PYTRPSales) AS TRP_PURCHASE_GROWTH
+FROM 
+    PPD_DB.MATERIALIZED.VC_MARKETING_SALES_HISTORY
+WHERE
+    GRP_NUM IN ('I003',
+                'I133')
+    AND REV_ACCT_TYPE IN ('T')
+    AND SLS_INV_DT < CURRENT_DATE
+GROUP BY 
+    GRP_NUM,
+    ZCD,
+    ZCD_NM
+ORDER BY
+    ZCD
+),
+
+CUMMINS AS
+(
+--CUMMINS
+SELECT 
+    GRP_NUM,
+    ZCD,
+    ZCD_NM,
+    Sum(IFF(YEAR(SLS_INV_DT)=YEAR(CURRENT_DATE)-1 AND SLS_INV_DT <= DATEADD('year',-1,CURRENT_DATE-1),EXT_NET,0)) AS PYCumminsSales,
+    Sum(IFF(YEAR(SLS_INV_DT)=YEAR(CURRENT_DATE),EXT_NET,0)) AS CYCumminsSales,
+    DIV0((CYCumminsSales-PYCumminsSales),PYCumminsSales) AS CUMMINS_PURCHASE_GROWTH
+FROM 
+    PPD_DB.MATERIALIZED.VC_MARKETING_SALES_HISTORY
+WHERE 
+    SLS_ITEM_CLS IN ('392E', 
+                     '392J', 
+                     '392R', 
+                     '392X', 
+                     '392S', 
+                     '392N', 
+                     '393E', 
+                     '393R', 
+                     '393X', 
+                     '395A', 
+                     '395R')
+    AND GRP_NUM IN ('I003',
+                    'I133')
+    AND SLS_INV_DT < CURRENT_DATE
+GROUP BY 
+    GRP_NUM,
+    ZCD,
+    ZCD_NM
+ORDER BY
+    ZCD
+)
+
+SELECT
+    A.GRP_NUM,
+    A.ZCD,
+    A.ZCD_NM,
+    PYSales,
+    CYSales,
+    PURCHASE_GROWTH,
+    PYTRPSALES,
+    CYTRPSALES,
+    TRP_PURCHASE_GROWTH,
+    PYCUMMINSSALES,
+    CYCUMMINSSALES,
+    CUMMINS_PURCHASE_GROWTH
+FROM
+    INLAND_GENERAL A
+    INNER JOIN
+    TRP B
+    ON A.ZCD = B.ZCD
+    INNER JOIN
+    CUMMINS C
+    ON A.ZCD = C.ZCD
+ORDER BY
+    ZCD
+    ;
